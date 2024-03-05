@@ -7,6 +7,7 @@ class Student(Base):
 
     id = Column(Integer, primary_key=True, index=True, autoincrement=True)
     name = Column(String, index=True)
+    student_id = Column(String, index=True)
 
     labor_records = relationship("LaborRecord", back_populates="student")
 

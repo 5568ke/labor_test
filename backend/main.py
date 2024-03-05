@@ -85,7 +85,7 @@ def create_labor_categories(file: UploadFile = File(...),db: Session = Depends(g
 def process_student_file(file_path: str, db: Session):
     df = pd.read_excel(file_path)
     for index, row in df.iterrows():
-        student = schemas.StudentCreate(name=row['Name'], student_number=row['Student Number'])
+        student = schemas.StudentCreate(name=row['Name'], student_id=str(row['Student Number']))
         crud.create_student(db=db, student=student)
 
 def process_labor_category_file(file_path: str, db: Session):

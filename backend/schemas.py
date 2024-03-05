@@ -11,12 +11,12 @@ class LaborRecordCreate(LaborRecordBase):
 
 class LaborRecord(LaborRecordBase):
     id: int
-    student_id: int  
     class Config:
         orm_mode = True
 
 class StudentBase(BaseModel):
     name: str
+    student_id: str
 
 class StudentCreate(StudentBase):
     pass
@@ -24,6 +24,7 @@ class StudentCreate(StudentBase):
 class Student(StudentBase):
     id: int
     labor_records: List[LaborRecord] = []
+    student_id: str
     class Config:
         orm_mode = True
 
