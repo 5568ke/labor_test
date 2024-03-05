@@ -1,8 +1,11 @@
-from fastapi import FastAPI, Depends, HTTPException
+from fastapi import FastAPI, Depends, HTTPException, File, UploadFile
+from fastapi.responses import JSONResponse
 from sqlalchemy.orm import Session
 from typing import List
 import crud, models, schemas
 from database import SessionLocal, engine
+import pandas as pd
+import os
 
 models.Base.metadata.create_all(bind=engine)
 
@@ -48,3 +51,67 @@ def list_labor_categories(db: Session = Depends(get_db)):
 def list_students(db: Session = Depends(get_db)):
     students = crud.get_all_students(db)
     return students
+
+@app.post("/add_students_by_file/")
+def create_students(file: UploadFile = File(...),db: Session = Depends(get_db)):
+    try:
+        db.query(models.Student).delete()
+        db.commit()
+
+        file_location = f"{file.filename}"
+        with open(file_location, "wb+") as file_object:
+            file_object.write(file.file.read())
+        process_student_file(file_location, db)
+        return {"message": "Students have been successfully added."}
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=400, content={"message": str(e)})
+
+@app.post("/add_labor_categories_by_file/")
+def create_labor_categories(file: UploadFile = File(...),db: Session = Depends(get_db)):
+    try:
+        db.query(models.LaborCategory).delete()
+        db.commit()
+
+        file_location = f"{file.filename}"
+        with open(file_location, "wb+") as file_object:
+            file_object.write(file.file.read())
+        process_labor_category_file(file_location, db)
+        return {"message": "Labor categories have been successfully added."}
+    except Exception as e:
+        db.rollback()
+        return JSONResponse(status_code=400, content={"message": str(e)})
+
+def process_student_file(file_path: str, db: Session):
+    df = pd.read_excel(file_path)
+    for index, row in df.iterrows():
+        student = schemas.StudentCreate(name=row['Name'], student_number=row['Student Number'])
+        crud.create_student(db=db, student=student)
+
+def process_labor_category_file(file_path: str, db: Session):
+    df = pd.read_excel(file_path)
+    for index, row in df.iterrows():
+        category = schemas.LaborCategoryCreate(name=row['Name'])
+        crud.create_labor_category(db=db, labor_category=category)
+
+
+# def fetch_student_data(db: Session):
+#     data = db.query(
+#         models.Student.name, 
+#         func.count(models.LaborRecord.id).label("cleaning_count")
+#     ).join(models.LaborRecord).group_by(models.Student.id).all()
+#     return data
+#
+# @app.get("/students/export/")
+# async def export_students():
+#     db = SessionLocal()
+#     try:
+#         students_data = fetch_student_data(db)
+#         df = pd.DataFrame(students_data, columns=["Name", "Student Number", "Cleaning Count"])
+#         file_path = "students_data.xlsx"
+#         df.to_excel(file_path, index=False)
+#         
+#         return FileResponse(path=file_path, filename="students_data.xlsx", media_type='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet')
+#     finally:
+#         db.close()
+#         # os.remove(file_path)
